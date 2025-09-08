@@ -40,6 +40,17 @@ This section will test your understanding of basic R syntax, data types, and vec
 
 ```{r}
 # Your code here
+course_name <- "Introduction to Data Science"
+num_students <- 45
+pi_value <- 3.14159
+is_active <- TRUE
+
+class(course_name)
+class(num_students)
+
+
+num_students >= 50
+course_name == "introduction to data science"
 ```
 
 ---
