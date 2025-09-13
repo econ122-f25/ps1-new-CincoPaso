@@ -64,6 +64,12 @@ course_name == "introduction to data science"
 
 ```{r}
 # Your code here
+temperatures <- c(22, 25, 19, 28, 23)
+sum(temperatures)
+mean(temperatures)
+temperatures <- c(22, 25, 19, 28, 23, 30)
+is_hot <- temperatures > 25
+print(is_hot)
 ```
 
 ---
@@ -85,11 +91,15 @@ mtcars_processed <- mtcars %>%
 
 # Your code starts here: Filter and arrange mtcars_processed
 # Your code here
+mtcars_processed %>%
+  filter((cyl == 4 | cyl == 6) & mpg > 20) %>%
+  arrange(mpg, desc(cyl))
 ```
 
 ### Short Answer
 Based on your filtered and arranged results, briefly describe the characteristics of the cars that appear at the top of your output. What does this tell you about the relationship between cylinders and miles per gallon in this subset?
 
+I notice that the results of this filter show cars mainly with 6 cylinders. As the MPG increases we can see that the cylinders shift to 4. Showing that 4 cylinder engines tend to get better MPG than cars with 6.
 ---
 
 ### Task 1.2: Mutating and Selecting
@@ -104,11 +114,19 @@ Using the `mtcars_processed` dataset:
 3.  Select only the `car_model`, `mpg`, `hp`, `wt`, `hp_per_wt`, and `qsec_category` columns.
 
 ```{r}
-# Your code here
+mtcars_processed %>%
+  mutate( hp_per_wt = hp / wt, qsec_category = case_when(
+    qsec < 17 ~ "Fast",
+    qsec >= 17 & qsec < 19 ~ "Medium",
+    qsec >= 19 ~ "Slow"
+  )) %>% 
+  select(car_model, mpg, hp, wt, hp_per_wt, qsec_category)
 ```
 
 ### Short Answer
 Why might creating `hp_per_wt` and `qsec_category` be useful metrics when analyzing car performance, beyond just raw horsepower and weight?
+
+This might be useful because these variables help provide data that is more interpretative and useful to the real world. For example, `hp_per_wt` might come in handy as a power to weight ratio is much more applicable than just the raw data. `qsec_category` is similar, in the sense that it might make seeing patterns of acceleration ability easier.
 
 ---
 
@@ -122,10 +140,20 @@ Using the `mtcars_processed` dataset:
 
 ```{r}
 # Your code here
+mtcars_processed %>%
+  group_by(cyl, am) %>%
+  summarise(
+    average_mpg = mean(mpg),
+    median_hp = median(hp),
+    n_cars = n(),
+  ) %>%
+  arrange(cyl, desc(average_mpg))
 ```
 
 ### Short Answer
 Based on your grouped summary, what general trends do you observe regarding average `mpg` and median `hp` across different combinations of `cylinders` and `transmission` types? How do these summaries help differentiate car characteristics?
+
+The grouped summary shows that cars with 4 cylinders have the highest avg MPG and the lowest median horse power, while 8 cylinder cars have the lowest mpg but a much higher horsepower. We can also see that the manual transmission group generally achieves better fuel efficiency. 
 
 ---
 
@@ -177,22 +205,45 @@ This task demonstrates how creating new variables that depend on previous time p
     * `Growth_2022`: `(Year_2022 - Year_2021) / Year_2021 * 100`
 
 ```{r}
-# Your code here
+product_sales_wide %>%
+  mutate(
+    Growth_2021 = (Year_2021 - Year_2020) / Year_2020 * 100,
+    Growth_2022 = (Year_2022 - Year_2021) / Year_2021 * 100
+  )
+
+
+
 ```
 
 2.  **Reshape to Long Format:** Reshape `product_sales_wide` into a long format called `product_sales_long`. Pivot the year columns (`Year_2020`, `Year_2021`, `Year_2022`) into two new columns: `Year` and `Sales`. Make sure `Year` is numeric.
 
 ```{r}
-# Your code here
+product_sales_long <- product_sales_wide %>%
+  pivot_longer(
+    cols = c(Year_2020, Year_2021, Year_2022),
+    names_to = "Year",
+    values_to = "Sales"
+  ) %>%
+  mutate(
+    Year = sub("Year_", "", Year)
+  )
 ```
 3.  **Analysis in Long Format:** Using the `product_sales_long` dataset, calculate a single `Growth_Rate` column that represents the year-over-year growth for each product. You should use `group_by()` and `lag()`. The formula for growth rate is `(current_year_sales - previous_year_sales) / previous_year_sales * 100`.
 
 ```{r}
-# Your code here
+product_sales_long %>%
+  group_by(product) %>%
+  arrange(Year) %>%
+  mutate(
+    Growth_Rate = (Sales - lag(Sales)) / lag(Sales) * 100
+  )
+
 ```
 
 ### Short Answer
 Compare the code required to calculate the year-over-year growth rate in the wide format versus the long format. Which approach is more concise and scalable if you had many more years of data? Why is the long format generally preferred for this type of time-series calculation?
+
+The long format is generally more concise and scalable.In the wide format we need to write a new formual for each additional year making it inefficient. In contrast the long format is much easier to scale as we dont need to do formula revison each time.
 
 ---
 
@@ -205,15 +256,21 @@ This task explores combining student demographic information with their academic
 3.  **Advanced Mutate (after Left Join):** After performing the left join, calculate the **average `grade_score` for each student**. This will require grouping by `student_id` and `student_name`.
 
 ```{r}
-# Your code for inner_join and its explanation
+inner_join(students_demographics, student_grades, by = "student_id")
+```
 ```{r}
-# Your code for left_join and its explanation
+left_join(students_demographics, student_grades, by = "student_id")
+```
 ```{r}
-# Your code for advanced mutate after left join
+left_join(students_demographics, student_grades, by = "student_id") %>%
+  group_by(student_id, student_name) %>%
+  summarize(avg_grade = mean(grade_score, na.rm = TRUE))
 ```
 
 ### Short Answer
 Compare the number of rows and the content of the `inner_join()` and `left_join()` results. Specifically, identify which student(s) are present in one join but not the other, and explain why. What does the average grade calculation reveal about students with multiple grades or no grades?
+
+There are some differences in Eve and Frank, they both appear in the `left_join()` but not the `inner_join()` this is because `inner_join()` only keeps students with at least one grade recorded. The average grade calculation shows that students with multiple grades have an average score shown, while students with no grades have `NaN` for their average.
 
 ---
 
@@ -226,15 +283,22 @@ This task focuses on using filtering joins to identify different categories of s
 3.  **Grades Without Students:** Use an `anti_join()` to identify any grade records in `student_grades` that do *not* correspond to an existing student in `students_demographics` (e.g., a data entry error or a record for a past student no longer in the demographic system). This should return only columns from `student_grades`.
 
 ```{r}
-# Your code for question 1 (semi_join)
+semi_join(students_demographics, student_grades, by = "student_id")
+```
 ```{r}
-# Your code for question 2 (anti_join on students_demographics)
+anti_join(students_demographics, student_grades, by = "student_id")
+```
 ```{r}
-# Your code for question 3 (anti_join on student_grades)
+anti_join(student_grades, students_demographics, by = "student_id")
 ```
 
 ### Short Answer
 Describe the distinct insights gained from each of the three filtering joins in this task. How do these joins help in data validation and understanding the completeness of your student records?
 
+For the `semi_join()` we see the enrolled students and are able to gather what students exist in both grade data sets. It will show who is actively enrolled and who has recorded grades
+
+For the `anti_join()` we can identify the students without grades, this will help highlight any gaps in the grade data.
+
+For the `anti_join()` on grades without students we are able to find data errors or students who have not been recorded properly.
 
 
